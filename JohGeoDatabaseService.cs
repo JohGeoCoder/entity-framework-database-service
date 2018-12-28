@@ -18,6 +18,9 @@
 ///     DatabaseService class. So consider this a living tool, and check back often for upgrades! If 
 ///     you have a great idea, feel free to submit a pull request.
 ///     
+/// Example Uses: 
+///     public class AppointmentService : DatabaseService<ProjectEntity, ProjectDbContext> { }
+///     
 /// Features on the burner:
 ///     CreateAll(...)
 ///     UpdateAll(...)
