@@ -205,8 +205,7 @@ namespace JohGeoCoder.Services.DatabaseService
                         dbSet.Update(entity);
                         break;
                     case DatabaseAction.Delete:
-                        entity.Deleted = true; //Specific logic for LongLifeFleet
-                        dbSet.Update(entity);
+                        dbSet.Remove(entity);
                         break;
                     default:
                         throw new DatabaseServiceException($"Invalid database operation. {entity.GetType()} with ID: {entity.Id}");
