@@ -32,6 +32,8 @@
 ///     method, the Call(TEntity, DatabaseAction) will be public and will call the private CRUD methods.
 ///
 
+using Blu.Services.DbInteractors.Interfaces;
+using EntityObjects.DbModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using System;
@@ -40,8 +42,24 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 
-namespace JohGeoCoder.Services.DatabaseService
+namespace Blu.Services.DbInteractors
 {
+
+    /// <summary>
+    /// The Database Service is a generic abstract class that wraps all necessary Entity Framework logic, exceptions, and logging
+    /// into a single location. It is easily droppable into any ASP.NET Core application to speed up development and to avoid
+    /// peppering Entity Framework using statements around your application.
+    /// 
+    /// For each entity type, an Interactor class can be created that extends this abstract DatabaseService class. An example is below:
+    /// 
+    /// public class UserInteractor : DatabaseService<User>, IUserInteractor {...}
+    /// 
+    /// The above example represents how to create an interactor for an entity called User. The UserInteractor implements the 
+    /// DatabaseService<T> abstract class where T is the User entity. The UserInteractor can also implement an IUserInteractor
+    /// interface to define any more specific business logic that goes beyond the simple Get, Create, Update, or Delete methods.
+    /// </summary>
+    /// 
+    /// <typeparam name="T">The entity generated from Entity Framework that we wish to interact with.</typeparam>
     public abstract class DatabaseService<TEntity, TContext> : IDatabaseService<TEntity> where TEntity : class, IBaseModel where TContext : DbContext
     {
         protected TContext _dbContext;
@@ -225,6 +243,9 @@ namespace JohGeoCoder.Services.DatabaseService
                     else
                     {
                         pureEntity = await dbSet.FindAsync(entity.Id);
+
+                        //Allows database triggers to execute and return their data.
+                        await _dbContext.Entry(pureEntity).ReloadAsync();
                     }
                 }
             }
@@ -312,33 +333,18 @@ namespace JohGeoCoder.Services.DatabaseService
         #endregion Abstract Methods
     }
 
+    public enum DatabaseAction
+    {
+        Create,
+        Update,
+        Delete
+    }
+
     public class DatabaseServiceException : Exception
     {
         public DatabaseServiceException() : this("An error occurred in the Database Service.") { }
         public DatabaseServiceException(string message) : this(message, null) { }
         public DatabaseServiceException(Exception innerException) : this("An error occurred in the Database Service.", innerException) { }
         public DatabaseServiceException(string message, Exception innerException) : base(message, innerException) { }
-    }
-
-    public interface IDatabaseService<T> where T : class, IBaseModel
-    {
-        IQueryable<T> GetAll(Func<T, bool> linqExpression = null, params Expression<Func<T, object>>[] includeExpression);
-        Task<T> Create(T entity);
-        Task<T> Update(T entity);
-        Task<T> Delete(T entity);
-        Task<bool> Exists(Func<T, bool> linqExpression = null);
-    }
-
-    public interface IBaseModel
-    {
-        long Id { get; set; }
-        bool Deleted { get; set; }
-    }
-
-    public enum DatabaseAction
-    {
-        Create,
-        Update,
-        Delete
     }
 }
