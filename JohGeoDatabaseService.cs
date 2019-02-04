@@ -271,51 +271,6 @@ namespace JohGeoCoder.Services.DatabaseService
             return pureEntity;
         }
 
-        private IEnumerable<string> GetAllNavigations(Type type, int maxLevel, string parentPath = "")
-        {
-            var navigationPaths = new List<string>();
-            if (type == null)
-            {
-                return navigationPaths;
-            }
-
-            if (!string.IsNullOrWhiteSpace(parentPath) && parentPath.Where(c => c == '.').Count() == (maxLevel - 1))
-            {
-                return navigationPaths;
-            }
-
-            IEnumerable<INavigation> navigations = null;
-
-            Type effectiveType = type;
-
-            //If current type is a collection.
-            if (type.GenericTypeArguments.Any())
-            {
-                effectiveType = type.GenericTypeArguments.First();
-            }
-
-            navigations = _dbContext.Model.FindEntityType(effectiveType).GetNavigations();
-            if (navigations == null || !navigations.Any()) return navigationPaths;
-
-            //Recursively add the navigation paths.
-            foreach (var property in navigations)
-            {
-                var newPath = string.IsNullOrWhiteSpace(parentPath)
-                    ? property.Name
-                    : string.Join(".", parentPath, property.Name);
-
-                //Add this current navigation property.
-                navigationPaths.Add(newPath);
-
-                var propertyType = property.ClrType;
-
-                //Add this navigation property's children navigation properties.
-                navigationPaths.AddRange(GetAllNavigations(propertyType, maxLevel, newPath));
-            }
-
-            return navigationPaths;
-        }
-
         #endregion Private Methods
 
         #region Abstract Methods
