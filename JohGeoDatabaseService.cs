@@ -3,7 +3,24 @@
 /// Github:         https://github.com/JohGeoCoder
 /// Email:          john@nepaweb.solutions
 /// Create Date:    March 14, 2018
-/// Update Date:    December 18, 2018
+/// Update Date:    February 4, 2019
+/// License: 		Attribution 4.0 International (CC BY 4.0)
+/// You are free to:
+///     Share - copy and redistribute the material in any medium or format.
+///     
+///     Adapt - remix, transform, and build upon the material
+///     for any purpose, even commercially. 
+///
+/// Under the following terms:
+///     Attribution - You must give appropriate credit, provide a link 
+///     to the license, and indicate if changes were made. 
+///     You may do so in any reasonable manner, but not in 
+///     any way that suggests the licensor endorses you or 
+///     your use.
+///     
+///     No additional restrictions - You may not apply legal terms or 
+///     technological measures that legally restrict others from doing 
+///     anything the license permits. 
 /// 
 /// Author Notes:
 ///     This class was a joy to make and is fun to maintain and upgrade. It started as a helper class to 
@@ -32,8 +49,6 @@
 ///     method, the Call(TEntity, DatabaseAction) will be public and will call the private CRUD methods.
 ///
 
-using Blu.Services.DbInteractors.Interfaces;
-using EntityObjects.DbModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using System;
@@ -42,9 +57,8 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 
-namespace Blu.Services.DbInteractors
+namespace JohGeoCoder.Services.DatabaseService
 {
-
     /// <summary>
     /// The Database Service is a generic abstract class that wraps all necessary Entity Framework logic, exceptions, and logging
     /// into a single location. It is easily droppable into any ASP.NET Core application to speed up development and to avoid
@@ -333,18 +347,33 @@ namespace Blu.Services.DbInteractors
         #endregion Abstract Methods
     }
 
-    public enum DatabaseAction
-    {
-        Create,
-        Update,
-        Delete
-    }
-
     public class DatabaseServiceException : Exception
     {
         public DatabaseServiceException() : this("An error occurred in the Database Service.") { }
         public DatabaseServiceException(string message) : this(message, null) { }
         public DatabaseServiceException(Exception innerException) : this("An error occurred in the Database Service.", innerException) { }
         public DatabaseServiceException(string message, Exception innerException) : base(message, innerException) { }
+    }
+
+    public interface IDatabaseService<T> where T : class, IBaseModel
+    {
+        IQueryable<T> GetAll(Func<T, bool> linqExpression = null, params Expression<Func<T, object>>[] includeExpression);
+        Task<T> Create(T entity);
+        Task<T> Update(T entity);
+        Task<T> Delete(T entity);
+        Task<bool> Exists(Func<T, bool> linqExpression = null);
+    }
+
+    public interface IBaseModel
+    {
+        long Id { get; set; }
+        bool Deleted { get; set; }
+    }
+
+    public enum DatabaseAction
+    {
+        Create,
+        Update,
+        Delete
     }
 }
