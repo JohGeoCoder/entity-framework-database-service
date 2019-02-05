@@ -264,7 +264,10 @@ namespace JohGeoCoder.Services.DatabaseService
                 if (countRowsAffected > 0)
                 {
                     //Allows database triggers to execute and return their data.
-                    await _dbContext.Entry(entities).ReloadAsync();
+                    foreach(var entity in entities)
+                    {
+                        await _dbContext.Entry(entity).ReloadAsync();
+                    }
                 }
             }
             catch (Exception ex)
