@@ -179,6 +179,16 @@ namespace JohGeoCoder.Services.DatabaseService
                 throw new DatabaseServiceException(ex);
             }
         }
+		
+		public async Task<IEnumerable<TEntity>> UpdateAll(IEnumerable<TEntity> entities)
+        {
+            if (entities == null || !entities.Any())
+            {
+                throw new DatabaseServiceException($"Entity is null when attempting to Update.");
+            }
+
+            return await Call(entities, DatabaseAction.Update);
+        }
 
         /// <summary>
         ///     This method deletes an existing entity from the TEntity repository.
@@ -224,51 +234,45 @@ namespace JohGeoCoder.Services.DatabaseService
         /// <param name="entity">The entity that contains data that will be persisted to the TEntity repository.</param>
         /// <param name="action">The type of action to be performed on the entity. The choices are Create, Update, or Delete</param>
         /// <returns></returns>
-        private async Task<TEntity> Call(TEntity entity, DatabaseAction action)
+		private async Task<TEntity> Call(TEntity entity, DatabaseAction action)
         {
-            TEntity pureEntity = null;
-
+            return (await Call(new List<TEntity> { entity }, action)).FirstOrDefault();
+        }
+		
+        private async Task<IEnumerable<TEntity>> Call(IEnumerable<TEntity> entities, DatabaseAction action)
+        {
             try
             {
                 var dbSet = _dbContext.Set<TEntity>();
                 switch (action)
                 {
                     case DatabaseAction.Create:
-                        dbSet.Add(entity);
+                        await dbSet.AddRangeAsync(entities);
                         break;
                     case DatabaseAction.Update:
-                        dbSet.Update(entity);
+                        dbSet.UpdateRange(entities);
                         break;
                     case DatabaseAction.Delete:
-                        dbSet.Remove(entity);
+                        dbSet.RemoveRange(entities);
                         break;
                     default:
-                        throw new DatabaseServiceException($"Invalid database operation. {entity.GetType()} with ID: {entity.Id}");
+                        throw new DatabaseServiceException($"Invalid database operation. {entities.FirstOrDefault()?.GetType().ToString() ?? "Items"} with IDs: {string.Join(", ", entities.Select(e => e.Id))}");
                 }
 
                 var countRowsAffected = await _dbContext.SaveChangesAsync();
 
                 if (countRowsAffected > 0)
                 {
-                    if (DatabaseAction.Delete == action)
-                    {
-                        pureEntity = entity;
-                    }
-                    else
-                    {
-                        pureEntity = await dbSet.FindAsync(entity.Id);
-
-                        //Allows database triggers to execute and return their data.
-                        await _dbContext.Entry(pureEntity).ReloadAsync();
-                    }
+                    //Allows database triggers to execute and return their data.
+                    await _dbContext.Entry(entities).ReloadAsync();
                 }
             }
             catch (Exception ex)
             {
-                throw new DatabaseServiceException($"Error on {action.ToString()} action on {entity.GetType()} ID: {entity.Id}", ex);
+                throw new DatabaseServiceException($"Error on {action.ToString()} action on {entities.FirstOrDefault()?.GetType().ToString() ?? "Items"} with IDs: {string.Join(", ", entities.Select(e => e.Id))}", ex);
             }
 
-            return pureEntity;
+            return entities;
         }
 
         #endregion Private Methods
