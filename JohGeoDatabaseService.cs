@@ -74,15 +74,15 @@ namespace JohGeoCoder.Services.DatabaseService
     /// </summary>
     /// 
     /// <typeparam name="T">The entity generated from Entity Framework that we wish to interact with.</typeparam>
-    public abstract class DatabaseService<TEntity, TContext> : IDatabaseService<TEntity> where TEntity : class, IBaseModel where TContext : DbContext
+    public abstract class DatabaseService<TEntity, TDbContext> : IDatabaseService<TEntity> where TEntity : class, IBaseModel where TDbContext : DbContext
     {
-        protected TContext _dbContext;
+        protected TDbContext _dbContext;
 
         /// <summary>
         ///     The DatabaseService's constructor is protected to ensure that only subclasses of the DatabaseService can instantiate the DatabaseService.
         /// </summary>
         /// <param name="dbContext">The database context, provided to the constructor ideally through dependency injection.</param>
-        protected DatabaseService(TContext dbContext)
+        protected DatabaseService(TDbContext dbContext)
         {
             _dbContext = dbContext;
         }
@@ -128,6 +128,11 @@ namespace JohGeoCoder.Services.DatabaseService
             }
 
             return repository;
+        }
+
+        public IQueryable<TEntity> GetAll(params Expression<Func<TEntity, object>>[] includeExpressions)
+        {
+            return GetAll(null, includeExpressions);
         }
 
         /// <summary>
@@ -179,8 +184,8 @@ namespace JohGeoCoder.Services.DatabaseService
                 throw new DatabaseServiceException(ex);
             }
         }
-		
-		public async Task<IEnumerable<TEntity>> UpdateAll(IEnumerable<TEntity> entities)
+
+        public async Task<IEnumerable<TEntity>> UpdateAll(IEnumerable<TEntity> entities)
         {
             if (entities == null || !entities.Any())
             {
@@ -238,7 +243,7 @@ namespace JohGeoCoder.Services.DatabaseService
         {
             return (await Call(new List<TEntity> { entity }, action)).FirstOrDefault();
         }
-		
+
         private async Task<IEnumerable<TEntity>> Call(IEnumerable<TEntity> entities, DatabaseAction action)
         {
             try
@@ -264,7 +269,7 @@ namespace JohGeoCoder.Services.DatabaseService
                 if (countRowsAffected > 0)
                 {
                     //Allows database triggers to execute and return their data.
-                    foreach(var entity in entities)
+                    foreach (var entity in entities)
                     {
                         await _dbContext.Entry(entity).ReloadAsync();
                     }
