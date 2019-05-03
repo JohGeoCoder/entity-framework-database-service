@@ -2,8 +2,9 @@
 /// Author:         John George, .NET Web Applications Engineer
 /// Github:         https://github.com/JohGeoCoder
 /// Email:          john@nepaweb.solutions
+/// This File:      https://github.com/JohGeoCoder/entity-framework-database-service
 /// Create Date:    March 14, 2018
-/// Update Date:    February 4, 2019
+/// Update Date:    May 3, 2019
 /// License: 		Attribution 4.0 International (CC BY 4.0)
 /// You are free to:
 ///     Share - copy and redistribute the material in any medium or format.
@@ -36,13 +37,11 @@
 ///     you have a great idea, feel free to submit a pull request.
 ///     
 /// Example Uses: 
-///     public class AppointmentService : DatabaseService<ProjectEntity, ProjectDbContext> { }
+///     public class AppointmentService : BaseRepoService<Appointment, ProjectDbContext> { }
 ///     
 /// Features on the burner:
 ///     CreateAll(...)
-///     UpdateAll(...)
 ///     DeleteAll(...)
-///     Upsert(...)
 ///     UpsertAll(...)
 ///     
 ///     Considering a method call inversion. Instead of the CRUD methods being public and calling the private Call(TEntity, DatabaseAction)
@@ -64,17 +63,20 @@ namespace JohGeoCoder.Services.DatabaseService
     /// into a single location. It is easily droppable into any ASP.NET Core application to speed up development and to avoid
     /// peppering Entity Framework using statements around your application.
     /// 
-    /// For each entity type, an Interactor class can be created that extends this abstract DatabaseService class. An example is below:
+    /// For each entity type, an Service class can be created that extends this abstract BaseRepoService class. An example is below:
     /// 
-    /// public class UserInteractor : DatabaseService<User>, IUserInteractor {...}
+    /// public class UserService : BaseRepoService<User, MyDbContext>, IUserService<User> {...}
     /// 
-    /// The above example represents how to create an interactor for an entity called User. The UserInteractor implements the 
-    /// DatabaseService<T> abstract class where T is the User entity. The UserInteractor can also implement an IUserInteractor
-    /// interface to define any more specific business logic that goes beyond the simple Get, Create, Update, or Delete methods.
+    /// The above example represents how to create an repository service for an entity called User. The UserService implements the 
+    /// BaseRepoService<TEntity, TDbContext> abstract class where TEntity is the User entity. The UserService can also implement an 
+    /// IUserService<User> interface to define any more specific business logic that goes beyond the simple Get, Create, Update, or 
+    /// Delete methods.
     /// </summary>
     /// 
-    /// <typeparam name="T">The entity generated from Entity Framework that we wish to interact with.</typeparam>
-    public abstract class DatabaseService<TEntity, TDbContext> : IDatabaseService<TEntity> where TEntity : class, IBaseModel where TDbContext : DbContext
+    /// <typeparam name="TEntity">The entity generated from Entity Framework that we wish to interact with.</typeparam>
+    /// <typeparam name="TDbContext">The DbContext implementation to work with.</typeparam>
+    /// 
+    public abstract class BaseRepoService<TEntity, TDbContext> : IRepoService<TEntity> where TEntity : class, IBaseEntity where TDbContext : DbContext
     {
         protected TDbContext _dbContext;
 
@@ -82,7 +84,7 @@ namespace JohGeoCoder.Services.DatabaseService
         ///     The DatabaseService's constructor is protected to ensure that only subclasses of the DatabaseService can instantiate the DatabaseService.
         /// </summary>
         /// <param name="dbContext">The database context, provided to the constructor ideally through dependency injection.</param>
-        protected DatabaseService(TDbContext dbContext)
+        protected BaseRepoService(TDbContext dbContext)
         {
             _dbContext = dbContext;
         }
@@ -90,20 +92,20 @@ namespace JohGeoCoder.Services.DatabaseService
         #region CRUD Methods
 
         /// <summary>
-        ///     Enables the caller to filter the repository of the entity type.
+        ///     Enables the user to filter the repository of the entity type and include associated entities and collections
+        ///     when retrieving from this repository. The weakness with this Get method is that the user cannot include
+        ///     the properties of models within a collection. If that functionality is desired, then use the GetAllThenInclude(...) methods.
         /// </summary>
-        /// <param name="predicate">The predicate that will act as a filter for the repository.</param>
+        /// <param name="filter">The filter function for the repository.</param>
         /// <param name="includeExpressions">
-        ///     A collection of Expressions that will be iterated over and "included" in the Linq query.
-        ///     Alternatively, this GetAll method returns an IQueryable interface, so the caller can handle
-        ///     the Includes.
+        ///     A collection of raw expressions that represent the nested entities and entity collections that will be included on the root entities.
         /// </param>
         /// <returns>
         ///     This method returns an IQueryable<T> that will contain the entities from the TEntity repository
-        ///     that match the provided filter. 
-        ///     If no filter was provided, all entities in the TEntity repository will be included.
+        ///     that match the provided filter. If no filter was provided, all entities in the TEntity repository 
+        ///     will be included.
         /// </returns>
-        public IQueryable<TEntity> GetAll(Func<TEntity, bool> predicate = null, params Expression<Func<TEntity, object>>[] includeExpressions)
+        public IQueryable<TEntity> GetAll(Func<TEntity, bool> filter = null, params Expression<Func<TEntity, object>>[] includeExpressions)
         {
             IQueryable<TEntity> repository = _dbContext.Set<TEntity>();
 
@@ -117,22 +119,97 @@ namespace JohGeoCoder.Services.DatabaseService
                     }
                 }
 
-                if (predicate != null)
+                if (filter != null)
                 {
-                    repository = repository.Where(predicate).AsQueryable();
+                    repository = repository.Where(filter).AsQueryable();
                 }
             }
             catch (Exception ex)
             {
-                throw new DatabaseServiceException("Error in DataService GetAll() method.", ex);
+                throw new BaseRepoServiceException("Error in DataService GetAll() method.", ex);
             }
 
             return repository;
         }
 
+        /// <summary>
+        ///     Enables the user to filter the repository of the entity type and include 
+        ///     associated entities and collections when retrieving from this repository.
+        ///     The weakness with this Get method is that the user cannot include the 
+        ///     properties of models within a collection. If that functionality is desired, 
+        ///     then use the GetAllThenInclude(...) methods.
+        /// </summary>
+        /// <param name="includeExpressions">
+        ///     A collection of raw expressions that represent the nested entities and entity 
+        ///     collections that will be included on the root entities.
+        /// </param>
+        /// <returns>
+        ///     This method returns an IQueryable<T> that will contain the entities from the TEntity repository
+        ///     that match the provided filter. If no filter was provided, all entities in the TEntity repository 
+        ///     will be included.
+        /// </returns>
         public IQueryable<TEntity> GetAll(params Expression<Func<TEntity, object>>[] includeExpressions)
         {
             return GetAll(null, includeExpressions);
+        }
+
+        /// <summary>
+        ///     Enables the user to filter the repository of the entity type and include 
+        ///     associated entities and collections when retrieving from this repository.
+        ///     This method enables the developer to include properties of members of 
+        ///     collections.
+        /// </summary>
+        /// <param name="filter">The filter function for the repository.</param>
+        /// <param name="includeExpressions">
+        ///     A collection of built expressions that represent the nested entities and entity collections that will be included on the root entities.
+        /// </param>
+        /// <returns>
+        ///     This method returns an IQueryable<T> that will contain the entities from the TEntity repository
+        ///     that match the provided filter. If no filter was provided, all entities in the TEntity repository 
+        ///     will be included. The sub-properties specified in the built Include Expressions will be applied.
+        /// </returns>
+        public IQueryable<TEntity> GetAllThenInclude(Func<TEntity, bool> filter = null, params IncludeBuilderResult[] includeExpressions)
+        {
+            IQueryable<TEntity> repository = _dbContext.Set<TEntity>();
+
+            try
+            {
+                if (includeExpressions != null && includeExpressions.Any())
+                {
+                    foreach (var expression in includeExpressions)
+                    {
+                        repository = repository.Include(expression.GetInclude());
+                    }
+                }
+
+                if (filter != null)
+                {
+                    repository = repository.Where(filter).AsQueryable();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new BaseRepoServiceException("Error in DataService GetAllThenInclude() method.", ex);
+            }
+
+            return repository;
+        }
+
+        /// <summary>
+        ///     Enables the user to include associated entities and collections 
+        ///     when retrieving from this repository. This method enables the 
+        ///     developer to include properties of members of collections.
+        /// </summary>
+        /// <param name="includeExpressions">
+        ///     A collection of built expressions that represent the nested entities and entity collections that will be included on the root entities.
+        /// </param>
+        /// <returns>
+        ///     This method returns an IQueryable<T> that will contain the entities from the TEntity repository.
+        ///     The sub-properties specified in the built Include Expressions will be applied.
+        /// </returns>
+        public IQueryable<TEntity> GetAllThenInclude(params IncludeBuilderResult[] includeExpressions)
+        {
+            return GetAllThenInclude(null, includeExpressions);
         }
 
         /// <summary>
@@ -158,30 +235,30 @@ namespace JohGeoCoder.Services.DatabaseService
             {
                 if (entity == null)
                 {
-                    throw new DatabaseServiceException($"Entity is null when attempting to Update.");
+                    throw new BaseRepoServiceException($"Entity is null when attempting to Update.");
                 }
 
                 var dbEntity = GetAll(e => e.Id == entity.Id).SingleOrDefault();
 
                 if (dbEntity == null)
                 {
-                    throw new DatabaseServiceException($"{entity.GetType()} with ID: {entity.Id} not found in the database when attempting to update.");
+                    throw new BaseRepoServiceException($"{entity.GetType()} with ID: {entity.Id} not found in the database when attempting to update.");
                 }
 
                 var entityToUpdate = PrepareUpdate(entity);
                 return await Call(entityToUpdate, DatabaseAction.Update);
             }
-            catch (DatabaseServiceException ex)
+            catch (BaseRepoServiceException ex)
             {
                 throw ex;
             }
             catch (InvalidOperationException ex)
             {
-                throw new DatabaseServiceException($"There is more than one instance of the {entity.GetType()} with ID: {entity.Id}", ex);
+                throw new BaseRepoServiceException($"There is more than one instance of the {entity.GetType()} with ID: {entity.Id}", ex);
             }
             catch (Exception ex)
             {
-                throw new DatabaseServiceException(ex);
+                throw new BaseRepoServiceException(ex);
             }
         }
 
@@ -189,10 +266,52 @@ namespace JohGeoCoder.Services.DatabaseService
         {
             if (entities == null || !entities.Any())
             {
-                throw new DatabaseServiceException($"Entity is null when attempting to Update.");
+                throw new BaseRepoServiceException($"Entity is null when attempting to Update.");
             }
 
             return await Call(entities, DatabaseAction.Update);
+        }
+
+        /// <summary>
+        /// This method creates or updates the given entity, depending on an existence check.
+        /// </summary>
+        /// <param name="entity">The entity to be created or updated in the repository</param>
+        /// <returns>This method returns the entity created or updated in the repository.</returns>
+        public async Task<TEntity> Upsert(TEntity entity)
+        {
+            try
+            {
+                if (entity == null)
+                {
+                    throw new BaseRepoServiceException($"Entity is null when attempting to Upsert.");
+                }
+
+                Task<TEntity> action;
+                if (entity.Id == 0L || !await Exists(e => e.Id == entity.Id))
+                {
+                    var entityToCreate = PrepareCreate(entity);
+                    action = Call(entityToCreate, DatabaseAction.Create);
+                }
+                else
+                {
+                    var entityToUpdate = PrepareUpdate(entity);
+                    action = Call(entityToUpdate, DatabaseAction.Update);
+                }
+
+                return action.GetAwaiter().GetResult();
+            }
+            catch (BaseRepoServiceException ex)
+            {
+                throw ex;
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new BaseRepoServiceException($"There is more than one instance of the {entity.GetType()} with ID: {entity.Id}", ex);
+            }
+            catch (Exception ex)
+            {
+                throw new BaseRepoServiceException(ex);
+            }
         }
 
         /// <summary>
@@ -261,7 +380,7 @@ namespace JohGeoCoder.Services.DatabaseService
                         dbSet.RemoveRange(entities);
                         break;
                     default:
-                        throw new DatabaseServiceException($"Invalid database operation. {entities.FirstOrDefault()?.GetType().ToString() ?? "Items"} with IDs: {string.Join(", ", entities.Select(e => e.Id))}");
+                        throw new BaseRepoServiceException($"Invalid database operation. {entities.FirstOrDefault()?.GetType().ToString() ?? "Items"} with IDs: {string.Join(", ", entities.Select(e => e.Id))}");
                 }
 
                 var countRowsAffected = await _dbContext.SaveChangesAsync();
@@ -277,7 +396,7 @@ namespace JohGeoCoder.Services.DatabaseService
             }
             catch (Exception ex)
             {
-                throw new DatabaseServiceException($"Error on {action.ToString()} action on {entities.FirstOrDefault()?.GetType().ToString() ?? "Items"} with IDs: {string.Join(", ", entities.Select(e => e.Id))}", ex);
+                throw new BaseRepoServiceException($"Error on {action.ToString()} action on {entities.FirstOrDefault()?.GetType().ToString() ?? "Items"} with IDs: {string.Join(", ", entities.Select(e => e.Id))}", ex);
             }
 
             return entities;
@@ -314,27 +433,96 @@ namespace JohGeoCoder.Services.DatabaseService
         #endregion Abstract Methods
     }
 
-    public class DatabaseServiceException : Exception
+    public class BaseRepoServiceException : Exception
     {
-        public DatabaseServiceException() : this("An error occurred in the Database Service.") { }
-        public DatabaseServiceException(string message) : this(message, null) { }
-        public DatabaseServiceException(Exception innerException) : this("An error occurred in the Database Service.", innerException) { }
-        public DatabaseServiceException(string message, Exception innerException) : base(message, innerException) { }
+        public BaseRepoServiceException() : this("An error occurred in the Database Service.") { }
+        public BaseRepoServiceException(string message) : this(message, null) { }
+        public BaseRepoServiceException(Exception innerException) : this("An error occurred in the Database Service.", innerException) { }
+        public BaseRepoServiceException(string message, Exception innerException) : base(message, innerException) { }
     }
 
-    public interface IDatabaseService<T> where T : class, IBaseModel
+    public interface IRepoService<T> where T : class, IBaseEntity
     {
-        IQueryable<T> GetAll(Func<T, bool> linqExpression = null, params Expression<Func<T, object>>[] includeExpression);
-        Task<T> Create(T entity);
-        Task<T> Update(T entity);
-        Task<T> Delete(T entity);
-        Task<bool> Exists(Func<T, bool> linqExpression = null);
+        IQueryable<TEntity> GetAll(Func<TEntity, bool> linqExpression = null, params Expression<Func<TEntity, object>>[] includeExpression);
+        IQueryable<TEntity> GetAll(params Expression<Func<TEntity, object>>[] includeExpressions);
+        IQueryable<TEntity> GetAllThenInclude(Func<TEntity, bool> linqExpression = null, params IncludeBuilderResult[] includeExpressions);
+        IQueryable<TEntity> GetAllThenInclude(params IncludeBuilderResult[] includeExpressions);
+        Task<TEntity> Create(TEntity entity);
+        Task<TEntity> Update(TEntity entity);
+        Task<TEntity> Upsert(TEntity entity);
+        Task<IEnumerable<TEntity>> UpdateAll(IEnumerable<TEntity> entities);
+        Task<TEntity> Delete(TEntity entity);
+        Task<bool> Exists(Func<TEntity, bool> linqExpression = null);
     }
 
-    public interface IBaseModel
+    public class IncludeBuilder<TEntity> where TEntity : IBaseEntity
+    {
+        public static IncludeBuilder<TEntity, Y> Include<Y>(Expression<Func<TEntity, Y>> initialInclude) where Y : IBaseEntity
+        {
+            return new IncludeBuilder<TEntity, Y>(initialInclude);
+        }
+
+        public static IncludeBuilder<TEntity, Y> Include<Y>(Expression<Func<TEntity, ICollection<Y>>> initialInclude) where Y : IBaseEntity
+        {
+            return new IncludeBuilder<TEntity, Y>(initialInclude);
+        }
+    }
+
+    public class IncludeBuilder<TEntity, YEntity> where TEntity : IBaseEntity where YEntity : IBaseEntity
+    {
+        private string IncludeExpression = "";
+
+        public IncludeBuilder(Expression<Func<TEntity, YEntity>> initialInclude)
+        {
+            IncludeExpression = initialInclude.Body.Type.Name;
+        }
+
+        public IncludeBuilder(Expression<Func<TEntity, ICollection<YEntity>>> initialInclude)
+        {
+            IncludeExpression = initialInclude.Body.Type.GenericTypeArguments[0].Name;
+        }
+
+        private IncludeBuilder(string previousExpression, string addition)
+        {
+            IncludeExpression = new StringBuilder().Append(previousExpression).Append(".").Append(addition).ToString();
+        }
+
+        public IncludeBuilder<YEntity, Z> ThenInclude<Z>(Expression<Func<YEntity, Z>> nextExpression) where Z : IBaseEntity
+        {
+            var includeName = nextExpression.Body.Type.Name;
+            return new IncludeBuilder<YEntity, Z>(IncludeExpression, includeName);
+        }
+
+        public IncludeBuilder<YEntity, Z> ThenInclude<Z>(Expression<Func<YEntity, ICollection<Z>>> nextExpression) where Z : IBaseEntity
+        {
+            var includeName = nextExpression.Body.Type.GenericTypeArguments[0].Name;
+            return new IncludeBuilder<YEntity, Z>(IncludeExpression, includeName);
+        }
+
+        public IncludeBuilderResult Done()
+        {
+            return new IncludeBuilderResult(IncludeExpression);
+        }
+    }
+
+    public class IncludeBuilderResult
+    {
+        private string IncludeExpression = "";
+
+        public IncludeBuilderResult(string includeExpression)
+        {
+            IncludeExpression = includeExpression;
+        }
+
+        public string GetInclude()
+        {
+            return IncludeExpression;
+        }
+    }
+
+    public interface IBaseEntity
     {
         long Id { get; set; }
-        bool Deleted { get; set; }
     }
 
     public enum DatabaseAction
