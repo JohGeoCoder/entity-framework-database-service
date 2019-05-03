@@ -101,11 +101,11 @@ namespace JohGeoCoder.Services.DatabaseService
         ///     A collection of raw expressions that represent the nested entities and entity collections that will be included on the root entities.
         /// </param>
         /// <returns>
-        ///     This method returns an IQueryable<T> that will contain the entities from the TEntity repository
+        ///     This method returns an IEnumerable<T> that will contain the entities from the TEntity repository
         ///     that match the provided filter. If no filter was provided, all entities in the TEntity repository 
         ///     will be included.
         /// </returns>
-        public IQueryable<TEntity> GetAll(Func<TEntity, bool> filter = null, params Expression<Func<TEntity, object>>[] includeExpressions)
+        public IEnumerable<TEntity> GetAll(Func<TEntity, bool> filter = null, params Expression<Func<TEntity, object>>[] includeExpressions)
         {
             IQueryable<TEntity> repository = _dbContext.Set<TEntity>();
 
@@ -129,7 +129,7 @@ namespace JohGeoCoder.Services.DatabaseService
                 throw new BaseRepoServiceException("Error in DataService GetAll() method.", ex);
             }
 
-            return repository;
+            return repository.AsEnumerable();
         }
 
         /// <summary>
@@ -144,11 +144,11 @@ namespace JohGeoCoder.Services.DatabaseService
         ///     collections that will be included on the root entities.
         /// </param>
         /// <returns>
-        ///     This method returns an IQueryable<T> that will contain the entities from the TEntity repository
+        ///     This method returns an IEnumerable<T> that will contain the entities from the TEntity repository
         ///     that match the provided filter. If no filter was provided, all entities in the TEntity repository 
         ///     will be included.
         /// </returns>
-        public IQueryable<TEntity> GetAll(params Expression<Func<TEntity, object>>[] includeExpressions)
+        public IEnumerable<TEntity> GetAll(params Expression<Func<TEntity, object>>[] includeExpressions)
         {
             return GetAll(null, includeExpressions);
         }
@@ -164,11 +164,11 @@ namespace JohGeoCoder.Services.DatabaseService
         ///     A collection of built expressions that represent the nested entities and entity collections that will be included on the root entities.
         /// </param>
         /// <returns>
-        ///     This method returns an IQueryable<T> that will contain the entities from the TEntity repository
+        ///     This method returns an IEnumerable<T> that will contain the entities from the TEntity repository
         ///     that match the provided filter. If no filter was provided, all entities in the TEntity repository 
         ///     will be included. The sub-properties specified in the built Include Expressions will be applied.
         /// </returns>
-        public IQueryable<TEntity> GetAllThenInclude(Func<TEntity, bool> filter = null, params IncludeBuilderResult[] includeExpressions)
+        public IEnumerable<TEntity> GetAllThenInclude(Func<TEntity, bool> filter = null, params IncludeBuilderResult[] includeExpressions)
         {
             IQueryable<TEntity> repository = _dbContext.Set<TEntity>();
 
@@ -192,7 +192,7 @@ namespace JohGeoCoder.Services.DatabaseService
                 throw new BaseRepoServiceException("Error in DataService GetAllThenInclude() method.", ex);
             }
 
-            return repository;
+            return repository.AsEnumerable();
         }
 
         /// <summary>
@@ -204,10 +204,10 @@ namespace JohGeoCoder.Services.DatabaseService
         ///     A collection of built expressions that represent the nested entities and entity collections that will be included on the root entities.
         /// </param>
         /// <returns>
-        ///     This method returns an IQueryable<T> that will contain the entities from the TEntity repository.
+        ///     This method returns an IEnumerable<T> that will contain the entities from the TEntity repository.
         ///     The sub-properties specified in the built Include Expressions will be applied.
         /// </returns>
-        public IQueryable<TEntity> GetAllThenInclude(params IncludeBuilderResult[] includeExpressions)
+        public IEnumerable<TEntity> GetAllThenInclude(params IncludeBuilderResult[] includeExpressions)
         {
             return GetAllThenInclude(null, includeExpressions);
         }
