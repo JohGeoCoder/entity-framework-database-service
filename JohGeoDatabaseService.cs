@@ -441,7 +441,7 @@ namespace JohGeoCoder.Services.DatabaseService
         public BaseRepoServiceException(string message, Exception innerException) : base(message, innerException) { }
     }
 
-    public interface IRepoService<T> where T : class, IBaseEntity
+    public interface IRepoService<TEntity> where T : class, IBaseEntity
     {
         IQueryable<TEntity> GetAll(Func<TEntity, bool> linqExpression = null, params Expression<Func<TEntity, object>>[] includeExpression);
         IQueryable<TEntity> GetAll(params Expression<Func<TEntity, object>>[] includeExpressions);
