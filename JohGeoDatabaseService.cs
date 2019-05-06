@@ -443,10 +443,10 @@ namespace JohGeoCoder.Services.DatabaseService
 
     public interface IRepoService<TEntity> where TEntity : class, IBaseEntity
     {
-        IQueryable<TEntity> GetAll(Func<TEntity, bool> linqExpression = null, params Expression<Func<TEntity, object>>[] includeExpression);
-        IQueryable<TEntity> GetAll(params Expression<Func<TEntity, object>>[] includeExpressions);
-        IQueryable<TEntity> GetAllThenInclude(Func<TEntity, bool> linqExpression = null, params IncludeBuilderResult[] includeExpressions);
-        IQueryable<TEntity> GetAllThenInclude(params IncludeBuilderResult[] includeExpressions);
+        IEnumerable<TEntity> GetAll(Func<TEntity, bool> linqExpression = null, params Expression<Func<TEntity, object>>[] includeExpression);
+        IEnumerable<TEntity> GetAll(params Expression<Func<TEntity, object>>[] includeExpressions);
+        IEnumerable<TEntity> GetAllThenInclude(Func<TEntity, bool> linqExpression = null, params IncludeBuilderResult[] includeExpressions);
+        IEnumerable<TEntity> GetAllThenInclude(params IncludeBuilderResult[] includeExpressions);
         Task<TEntity> Create(TEntity entity);
         Task<TEntity> Update(TEntity entity);
         Task<TEntity> Upsert(TEntity entity);
