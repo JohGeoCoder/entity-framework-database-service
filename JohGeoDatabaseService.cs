@@ -93,7 +93,31 @@ namespace JohGeoCoder.Services.DatabaseService
     ///         public IActionResult GetAllUsers()
     ///         {
     ///             var allUsers = _userService.GetAll();
+    ///             var userWithIdOfOne = _userService.GetAll(u => u.Id == 1);
     ///             return Ok(allUsers);
+    ///         }
+    ///         
+    ///         [HttpGet("hasrole")]
+    ///         public IActionResult CheckIfScrantonUserOneHasManagerRole()\
+    ///         {
+    ///             //This code assumes that the User entity is related to a collection of UserRole objects
+    ///             //and each UserRole has a foreign key to a Role object. That is 2 levels deep. The first
+    ///             //IncludeBuilder argument covers this use case as an example.
+    ///             //
+    ///             //To demonstrate you can have an indefinite number of include paths, we will also include 
+    ///             //the Address property of the User object by sending as second IncludeBuilder argument.
+    ///             //
+    ///             //These Includes are necessary if you want to include the related entity properties in
+    ///             //the filter logic.
+    ///             var scrantonUserIdOneWithRoles = _userService.GetAll(
+    ///                 u => u.Id == 1 && u.Address.City == "Scranton",
+    ///                 IncludeBuilder<User>.Include(u => u.UserRoles).ThenInclude(ur => ur.Role).Done(),
+    ///                 IncludeBuilder<User>.Include(u => u.Address).Done()
+    ///             ).SingleOrDefault();
+    ///             
+    ///             var userHasManagerRole = userIdOneWithRoles.UserRoles.Any(userRole => userRole.Role.Name.ToLower() == "manager");
+    ///             
+    ///             return Ok(userHasManagerRole);
     ///         }
     ///     }
     /// 
