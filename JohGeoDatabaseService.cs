@@ -36,9 +36,6 @@
 ///     DatabaseService class. So consider this a living tool, and check back often for upgrades! If 
 ///     you have a great idea, feel free to submit a pull request.
 ///     
-/// Example Uses: 
-///     public class AppointmentService : BaseRepoService<Appointment, ProjectDbContext> { }
-///     
 /// Features on the burner:
 ///     CreateAll(...)
 ///     DeleteAll(...)
@@ -65,7 +62,40 @@ namespace JohGeoCoder.Services.DatabaseService
     /// 
     /// For each entity type, an Service class can be created that extends this abstract BaseRepoService class. An example is below:
     /// 
-    /// public class UserService : BaseRepoService<User, MyDbContext>, IUserService<User> {...}
+    /// Example Uses: 
+    /// 
+    ///     public interface IUserService : IRepoService<User> 
+    ///     { 
+    ///     
+    ///         // If you want to define any additional methods in IUserService
+    ///         // they get defined here.
+    ///         
+    ///     }
+    /// 
+    ///     public class UserService : BaseRepoService<User, MyOwnDbContext>, IUserService 
+    ///     {
+    ///         public UserService(MyOwnDbContext dbContext) : base(dbContext) { }
+    ///     }
+    ///     
+    ///     [ApiController]
+    ///     [Route("api/[controller]")]
+    ///     public class UserController : Controller
+    ///     {
+    ///         private IUserService _userService;
+    ///         
+    ///         //Assuming dependency injection is implemented
+    ///         public UserController(IUserService userService)
+    ///         {
+    ///             _userService = userService;
+    ///         }
+    ///         
+    ///         [HttpGet]
+    ///         public IActionResult GetAllUsers()
+    ///         {
+    ///             var allUsers = _userService.GetAll();
+    ///             return Ok(allUsers);
+    ///         }
+    ///     }
     /// 
     /// The above example represents how to create an repository service for an entity called User. The UserService implements the 
     /// BaseRepoService<TEntity, TDbContext> abstract class where TEntity is the User entity. The UserService can also implement an 
